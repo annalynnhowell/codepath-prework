@@ -1,0 +1,134 @@
+// global constants
+const clueHoldTime = 1500; //how long to hold each clue's light/sound
+const cluePauseTime = 1500; //how long to pause in between clues
+const nextClueWaitTime = 1500; //how long to wait before starting playback of the clue sequence
+var lionAudio = new Audio("https://cdn.glitch.com/0b76fc31-8d39-4064-97ee-3129342b033c%2Flion.mp3?v=1616640414128");
+var raccoonAudio = new Audio("https://cdn.glitch.com/0b76fc31-8d39-4064-97ee-3129342b033c%2Fraccoon.mp3?v=1616640414060");
+var horseAudio = new Audio("https://cdn.glitch.com/0b76fc31-8d39-4064-97ee-3129342b033c%2Fhorse.mp3?v=1616640414154");
+var pigAudio = new Audio("https://cdn.glitch.com/0b76fc31-8d39-4064-97ee-3129342b033c%2Fpig.mp3?v=1616640414091");
+var hedgehogAudio = new Audio("https://cdn.glitch.com/0b76fc31-8d39-4064-97ee-3129342b033c%2Fhedgehog.mp3?v=1616640414060");
+var monkeyAudio = new Audio("https://cdn.glitch.com/0b76fc31-8d39-4064-97ee-3129342b033c%2Fmonkey.mp3?v=1616642276711")
+
+//Global Variables
+var pattern = [];
+var progress = 0; 
+var gamePlaying = false;
+var tonePlaying = false;
+var volume = 0.5;  //must be between 0.0 and 1.0
+var guessCounter = 0;
+
+
+function startGame(){
+    //initialize game variables
+    progress = 0;
+    gamePlaying = true;
+    // swap the Start and Stop buttons
+    document.getElementById("startBtn").classList.add("hidden");
+    document.getElementById("stopBtn").classList.remove("hidden");
+    playClueSequence();
+}
+
+function stopGame(){
+    //initialize game variables
+    gamePlaying = false;
+    // swap the Start and Stop buttons
+    document.getElementById("startBtn").classList.remove("hidden");
+    document.getElementById("stopBtn").classList.add("hidden");
+}
+
+// Sound Synthesis Functions
+const freqMap = {
+  1: lionAudio,
+  2: raccoonAudio,
+  3: horseAudio,
+  4: pigAudio,
+  5: hedgehogAudio
+}
+
+function playTone(btn,len){ 
+  freqMap[btn].play();
+  tonePlaying = true
+  setTimeout(function(){
+    stopTone()
+  },len)
+}
+
+function startTone(btn){
+  if(!tonePlaying){
+    freqMap[btn].play();
+    tonePlaying = true
+  }
+}
+
+function stopTone(){
+    g.gain.setTargetAtTime(0,context.currentTime + 0.05,0.025)
+    tonePlaying = false
+}
+
+function lightButton(btn){
+  document.getElementById("button"+btn).classList.add("lit")
+}
+
+function clearButton(btn){
+  document.getElementById("button"+btn).classList.remove("lit")
+}
+
+function playSingleClue(btn){
+  if(gamePlaying){
+    lightButton(btn);
+    playTone(btn,clueHoldTime);
+    setTimeout(clearButton,clueHoldTime,btn);
+  }
+}
+
+function playClueSequence(){
+  guessCounter = 0;
+  pattern.push(Math.floor(Math.random() * 5) + 1);
+  let delay = nextClueWaitTime; //set delay to initial wait time
+  for(let i=0;i<=progress;i++){ // for each clue that is revealed so far
+    console.log("play single clue: " + pattern[i] + " in " + delay + "ms")
+    setTimeout(playSingleClue,delay,pattern[i]) // set a timeout to play that clue
+    delay += clueHoldTime 
+    delay += cluePauseTime;
+  }
+}
+
+function loseGame(){
+  stopGame();
+  monkeyAudio.play();
+  alert("Game Over! You lost. Your score: " + progress);
+}
+
+function guess(btn){
+  console.log("user guessed: " + btn);
+  if(!gamePlaying){
+    return;
+  }
+  if(pattern[guessCounter] == btn){
+    //Guess was correct!
+    if(guessCounter == progress){
+        //Pattern correct. Add next segment
+        progress++;
+        playClueSequence();
+      }
+
+    else{
+      //so far so good... check the next guess
+      guessCounter++;
+    }
+  }else{
+    //Guess was incorrect
+    //GAME OVER: LOSE!
+    loseGame();
+  }
+}
+
+//Page Initialization
+// Init Sound Synthesizer
+var context = new AudioContext()
+var o = context.createOscillator()
+var g = context.createGain()
+g.connect(context.destination)
+g.gain.setValueAtTime(0,context.currentTime)
+o.connect(g)
+o.start(0)
